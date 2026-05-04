@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <title>Untitled</title>
+    
+
+  </head>
+    
+  <body>
+  <!DOCTYPE html>
+<html>
+<head>
+  <title>Adaa Kidswear POS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="manifest" href="manifest.json">
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <style>
+    body { font-family: Arial; background:#f2f2f2; padding:10px; }
+    h1 { text-align:center; }
+    input, button { padding:10px; margin:5px; width:95%; font-size:16px; }
+    .box { background:white; padding:10px; margin-top:10px; border-radius:10px; }
+    .item { border-bottom:1px solid #ddd; padding:8px; }
+    .row { display:flex; gap:5px; }
+    .row input { width:30%; }
+    .remove { background:red; color:white; border:none; padding:5px; }
+  </style>
+</head>
+
+<body>
+
+<h1>🛍️ Adaa Kidswear POS</h1>
+
+<div class="box">
+  <input type="number" id="cost" placeholder="Purchase Price ₹">
+  <input type="number" id="sell" placeholder="Selling Price ₹">
+
+  <div id="live"></div>
+
+  <button onclick="addItem()">➕ Add Item</button>
+</div>
+
+<div class="box">
+  <h3>🧾 Current Bill</h3>
+  <div id="cart"></div>
+</div>
+
+<div class="box">
+  <h3>📊 Today Summary</h3>
+  <div>Items: <span id="items">0</span></div>
+  <div>Revenue: ₹<span id="revenue">0</span></div>
+  <div>Profit: ₹<span id="profit">0</span></div>
+</div>
+
+<div class="box">
+  <h3>📅 Monthly Summary</h3>
+  <div>Revenue: ₹<span id="monthlyRevenue">0</span></div>
+  <div>Profit: ₹<span id="monthlyProfit">0</span></div>
+</div>
+
+<button onclick="clearBill()">🧹 New Customer</button>
+<button onclick="endDay()">📦 End Day</button>
+<button onclick="exportPDF()">📄 Export PDF</button>
+  <button onclick="generateBillPDF()">🧾 Generate Bill</button>
+<button onclick="sharePDF()">📤 Share Bill (WhatsApp)</button>
+
+
+<script>
+// ===== DATA =====
+let cart = [];
+let dailySales = JSON.parse(localStorage.getItem("dailySales") || "[]");
+let monthlyData = JSON.parse(localStorage.getItem("monthlyData") || "[]");
+
+// ===== AUTO SAVE =====
+function saveData() {
+  localStorage.setItem("dailySales", JSON.stringify(dailySales));
+  localStorage.setItem("monthlyData", JSON.stringify(monthlyData));
+}
+
+// ===== LIVE CALC =====
+document.getElementById("cost").addEventListener("input", liveCalc);
+document.getElementById("sell").addEventListener("input", liveCalc);
+
+function liveCalc() {
+  let cost = +document.getElementById("cost").value || 0;
+  let sell = +document.getElementById("sell").value || 0;
+
+  let profit = sell - cost;
+  let min = cost * 1.3;
+
+  document.getElementById("live").innerHTML =
+    `Min Price: ₹${min.toFixed(0)} | Profit: ₹${profit.toFixed(2)}`;
+}
+
+// ===== ADD ITEM =====
+function addItem() {
+  let cost = +document.getElementById("cost").value;
+  let sell = +document.getElementById("sell").value;
+
+  if (!cost || !sell) return alert("Enter values");
+
+  cart.push({ cost, sell, qty: 1 });
+
+  document.getElementById("cost").value = "";
+  document.getElementById("sell").value = "";
+  document.getElementById("live").innerHTML = "";
+
+  renderCart();
+}
+
+// ===== CART RENDER =====
+function renderCart() {
+  let cartDiv = document.getElementById("cart");
+  cartDiv.innerHTML = "";
+
+  cart.forEach((item, index) => {
+    let min = item.cost * 1.3;
+
+    let div = document.createElement("div");
+    div.className = "item";
+
+    div.innerHTML = `
+      Cost: ₹${item.cost} | Sell: ₹${item.sell} | Min: ₹${min.toFixed(0)}<br>
+
+      <div class="row">
+        <input type="number" value="${item.qty}" onchange="updateQty(${index}, this.value)">
+        <button class="remove" onclick="removeItem(${index})">X</button>
+      </div>
+
+      Profit: ₹${((item.sell - item.cost) * item.qty).toFixed(2)}
+    `;
+
+    cartDiv.appendChild(div);
+  });
+
+  updateSummary();
+}
+
+// ===== UPDATE CART =====
+function updateQty(i, val) {
+  cart[i].qty = +val;
+  renderCart();
+}
+
+function removeItem(i) {
+  cart.splice(i, 1);
+  renderCart();
+}
+
+// ===== MOVE TO DAILY =====
+function clearBill() {
+  cart.forEach(item => {
+    dailySales.push({ ...item });
+  });
+
+  cart = [];
+  saveData();
+  renderCart();
+}
+
+// ===== SUMMARY (ONLY DAILY SALES) =====
+function updateSummary() {
+  let revenue = 0;
+  let profit = 0;
+  let items = 0;
+
+  dailySales.forEach(item => {
+    revenue += item.sell * item.qty;
+    profit += (item.sell - item.cost) * item.qty;
+    items += item.qty;
+  });
+
+  document.getElementById("items").innerText = items;
+  document.getElementById("revenue").innerText = revenue.toFixed(2);
+  document.getElementById("profit").innerText = profit.toFixed(2);
+
+  updateMonthly();
+}
+
+// ===== END DAY =====
+function endDay() {
+  if (dailySales.length === 0) return alert("No sales today");
+
+  let revenue = 0;
+  let profit = 0;
+
+  dailySales.forEach(item => {
+    revenue += item.sell * item.qty;
+    profit += (item.sell - item.cost) * item.qty;
+  });
+
+  let today = new Date().toLocaleDateString();
+
+  monthlyData.push({ date: today, revenue, profit });
+
+  dailySales = [];
+  saveData();
+  updateSummary();
+
+  alert("Day Closed & Saved");
+}
+
+// ===== MONTHLY =====
+function updateMonthly() {
+  let totalRevenue = 0;
+  let totalProfit = 0;
+
+  monthlyData.forEach(day => {
+    totalRevenue += day.revenue;
+    totalProfit += day.profit;
+  });
+
+  document.getElementById("monthlyRevenue").innerText = totalRevenue.toFixed(2);
+  document.getElementById("monthlyProfit").innerText = totalProfit.toFixed(2);
+}
+
+// ===== PDF EXPORT =====
+function exportPDF() {
+  const { jsPDF } = window.jspdf;
+  let doc = new jsPDF();
+
+  doc.text("Adaa Kidswear - Daily Report", 20, 20);
+
+  let y = 40;
+
+  let allItems = [...dailySales, ...cart];
+
+  if (allItems.length === 0) {
+    doc.text("No sales yet", 20, y);
+  } else {
+    allItems.forEach(item => {
+      doc.text(`Cost ₹${item.cost} | Sell ₹${item.sell} x${item.qty}`, 20, y);
+      y += 10;
+    });
+  }
+
+  let revenue = 0;
+  let profit = 0;
+
+  allItems.forEach(item => {
+    revenue += item.sell * item.qty;
+    profit += (item.sell - item.cost) * item.qty;
+  });
+
+  doc.text("Total Revenue: ₹" + revenue.toFixed(2), 20, y + 10);
+  doc.text("Total Profit: ₹" + profit.toFixed(2), 20, y + 20);
+
+  doc.save("daily-report.pdf");
+}
+  
+  let lastPDFBlob = null;
+
+function generateBillPDF() {
+  if (cart.length === 0) {
+    alert("No items in current bill");
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  let doc = new jsPDF({
+    unit: "mm",
+    format: [80, 200] // receipt size
+  });
+
+  let y = 10;
+
+  // Store Name
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(14);
+  doc.text("Adaa Kidswear", 40, y, { align: "center" });
+
+  y += 6;
+
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+
+  let now = new Date();
+  doc.text(now.toLocaleString(), 40, y, { align: "center" });
+
+  y += 6;
+
+  doc.text("--------------------------------", 10, y);
+  y += 5;
+
+  let total = 0;
+
+  cart.forEach(item => {
+    let lineTotal = item.sell * item.qty;
+    total += lineTotal;
+
+    // Left: item
+    doc.text(`₹${item.sell} x ${item.qty}`, 10, y);
+
+    // Right: total
+    doc.text(`₹${lineTotal}`, 70, y, { align: "right" });
+
+    y += 5;
+  });
+
+  y += 2;
+  doc.text("--------------------------------", 10, y);
+
+  y += 6;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+
+  doc.text("TOTAL", 10, y);
+  doc.text(`₹${total}`, 70, y, { align: "right" });
+
+  y += 8;
+
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+
+  doc.text("Thank you! Visit again 🙏", 40, y, { align: "center" });
+
+  // Save PDF blob for sharing
+  lastPDFBlob = doc.output("blob");
+
+  // Download automatically
+  doc.save("Adaa_Bill.pdf");
+}
+
+// SHARE PDF
+function sharePDF() {
+  if (!lastPDFBlob) {
+    alert("Generate bill first");
+    return;
+  }
+
+  let file = new File([lastPDFBlob], "Adaa_Bill.pdf", {
+    type: "application/pdf"
+  });
+
+  if (navigator.share) {
+    navigator.share({
+      title: "Adaa Kidswear Bill",
+      files: [file]
+    }).catch(err => console.log(err));
+  } else {
+    alert("Sharing not supported. File downloaded instead.");
+  }
+}
+
+  if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("service-worker.js");
+}
+
+
+// ===== INIT =====
+updateSummary();
+</script>
+
+</body>
+</html>
+    
+  </body>
+  
+</html>
