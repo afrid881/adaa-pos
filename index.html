@@ -72,6 +72,7 @@
 <button onclick="exportPDF()">📄 Export PDF</button>
   <button onclick="generateBillPDF()">🧾 Generate Bill</button>
 <button onclick="sharePDF()">📤 Share Bill (WhatsApp)</button>
+  <button onclick="resetMonth()">🗑️ Reset Monthly Data</button>
 
 
 <script>
@@ -416,6 +417,21 @@ function sharePDF() {
   renderTransactions();
 }
 
+  function resetMonth() {
+  let confirmReset = confirm(
+    "Are you sure you want to reset ALL monthly data?"
+  );
+
+  if (!confirmReset) return;
+
+  monthlyData = [];
+
+  saveData();
+  updateMonthly();
+
+  alert("Monthly data reset successfully");
+}
+  
 // ===== INIT =====
 updateSummary();
   renderTransactions();
