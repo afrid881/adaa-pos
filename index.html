@@ -55,7 +55,12 @@
   <div>Revenue: ₹<span id="revenue">0</span></div>
   <div>Profit: ₹<span id="profit">0</span></div>
 </div>
-
+  
+<div class="box">
+  <h3>🧾 Transaction History</h3>
+  <div id="transactions"></div>
+</div>
+  
 <div class="box">
   <h3>📅 Monthly Summary</h3>
   <div>Revenue: ₹<span id="monthlyRevenue">0</span></div>
@@ -154,12 +159,20 @@ function removeItem(i) {
 // ===== MOVE TO DAILY =====
 function clearBill() {
   cart.forEach(item => {
-    dailySales.push({ ...item });
+    dailySales.push({
+      id: Date.now() + Math.random(),
+      cost: item.cost,
+      sell: item.sell,
+      qty: item.qty,
+      date: new Date().toLocaleString()
+    });
   });
 
   cart = [];
+
   saveData();
   renderCart();
+  renderTransactions();
 }
 
 // ===== SUMMARY (ONLY DAILY SALES) =====
@@ -351,9 +364,61 @@ function sharePDF() {
   navigator.serviceWorker.register("service-worker.js");
 }
 
+  function renderTransactions() {
+  let div = document.getElementById("transactions");
+
+  div.innerHTML = "";
+
+  dailySales.forEach((item, index) => {
+    let profit = (item.sell - item.cost) * item.qty;
+
+    let row = document.createElement("div");
+    row.className = "item";
+
+    row.innerHTML = `
+      ${item.date}<br>
+      Cost ₹${item.cost} | Sell ₹${item.sell} x ${item.qty}<br>
+      Profit ₹${profit.toFixed(2)}<br>
+
+      <button onclick="editTransaction(${index})">✏️ Edit</button>
+      <button onclick="deleteTransaction(${index})">↩️ Return/Delete</button>
+    `;
+
+    div.appendChild(row);
+  });
+}
+
+  function deleteTransaction(index) {
+  if (!confirm("Delete this transaction?")) return;
+
+  dailySales.splice(index, 1);
+
+  saveData();
+  updateSummary();
+  renderTransactions();
+}
+
+  function editTransaction(index) {
+  let item = dailySales[index];
+
+  let newCost = prompt("Edit Purchase Price", item.cost);
+  let newSell = prompt("Edit Selling Price", item.sell);
+  let newQty = prompt("Edit Quantity", item.qty);
+
+  if (!newCost || !newSell || !newQty) return;
+
+  item.cost = +newCost;
+  item.sell = +newSell;
+  item.qty = +newQty;
+
+  saveData();
+  updateSummary();
+  renderTransactions();
+}
 
 // ===== INIT =====
 updateSummary();
+  renderTransactions();
 </script>
 
 </body>
