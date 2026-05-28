@@ -48,8 +48,11 @@
   <h3>🧾 Current Bill</h3>
   <div id="cart"></div>
 </div>
-
+  
+<h3>🧾 Current Bill Total</h3>
+<div>₹<span id="billTotal">0</span></div>
 <div class="box">
+  
   <h3>📊 Today Summary</h3>
   <div>Items: <span id="items">0</span></div>
   <div>Revenue: ₹<span id="revenue">0</span></div>
@@ -144,6 +147,7 @@ function renderCart() {
   });
 
   updateSummary();
+  updateBillTotal();
 }
 
 // ===== UPDATE CART =====
@@ -430,6 +434,16 @@ function sharePDF() {
   updateMonthly();
 
   alert("Monthly data reset successfully");
+}
+
+  function updateBillTotal() {
+  let total = 0;
+
+  cart.forEach(item => {
+    total += item.sell * item.qty;
+  });
+
+  document.getElementById("billTotal").innerText = total.toFixed(2);
 }
   
 // ===== INIT =====
