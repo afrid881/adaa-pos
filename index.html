@@ -301,28 +301,106 @@ allItems.forEach(item => {
   let lastPDFBlob = null;
 
 function generateBillPDF() {
+
   if (cart.length === 0) {
     alert("No items in current bill");
     return;
   }
 
   const { jsPDF } = window.jspdf;
+
   let doc = new jsPDF({
     unit: "mm",
-    format: [80, 200] // receipt size
+    format: [80, 200]
   });
+
+  let y = 10;
+
+  let lastPDFBlob = null;
+  
+  // Store Name
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(14);
+  doc.text("Adaa Kidswear", 40, y, {
+    align: "center"
+  });
+
+  y += 7;
+
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+
+  doc.text(
+    new Date().toLocaleString(),
+    40,
+    y,
+    { align: "center" }
+  );
+
+  y += 6;
+
+  doc.text("--------------------------------", 10, y);
+
+  y += 6;
 
   let total = 0;
 
-cart.forEach(item => {
-  let lineTotal = item.sell * item.qty;
-  total += lineTotal;
+  cart.forEach(item => {
 
-  doc.text(`₹${item.sell} x ${item.qty}`, 10, y);
-  doc.text(`₹${lineTotal}`, 70, y, { align: "right" });
+    let lineTotal =
+      item.sell * item.qty;
 
-  y += 5;
-});
+    total += lineTotal;
+
+    doc.text(
+      `₹${item.sell} x ${item.qty}`,
+      10,
+      y
+    );
+
+    doc.text(
+      `₹${lineTotal}`,
+      70,
+      y,
+      { align: "right" }
+    );
+
+    y += 6;
+
+  });
+
+  doc.text("--------------------------------", 10, y);
+
+  y += 8;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+
+  doc.text("TOTAL", 10, y);
+
+  doc.text(
+    `₹${total.toFixed(2)}`,
+    70,
+    y,
+    { align: "right" }
+  );
+
+  y += 10;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+
+  doc.text(
+    "Thank you! Visit Again 🙏",
+    40,
+    y,
+    { align: "center" }
+  );
+
+  lastPDFBlob = doc.output("blob");
+
+  doc.save("Adaa_Bill.pdf");
+}
 
   // Store Name
   doc.setFont("helvetica", "bold");
