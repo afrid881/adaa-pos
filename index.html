@@ -67,6 +67,8 @@
   <div>Items: <span id="items">0</span></div>
   <div>Revenue: ₹<span id="revenue">0</span></div>
   <div>Profit: ₹<span id="profit">0</span></div>
+  <div>Cash: ₹<span id="cashTotal">0</span></div>
+<div>UPI: ₹<span id="upiTotal">0</span></div>
 </div>
   
 <div class="box">
@@ -206,19 +208,50 @@ updateSummary();
 }
 // ===== SUMMARY (ONLY DAILY SALES) =====
 function updateSummary() {
+
   let revenue = 0;
   let profit = 0;
   let items = 0;
 
+  let cashTotal = 0;
+  let upiTotal = 0;
+
   dailySales.forEach(item => {
-    revenue += item.sell * item.qty;
-    profit += (item.sell - item.cost) * item.qty;
+
+    let saleAmount =
+      item.sell * item.qty;
+
+    revenue += saleAmount;
+
+    profit +=
+      (item.sell - item.cost) * item.qty;
+
     items += item.qty;
+
+    if (item.payment === "Cash") {
+      cashTotal += saleAmount;
+    }
+
+    if (item.payment === "UPI") {
+      upiTotal += saleAmount;
+    }
+
   });
 
-  document.getElementById("items").innerText = items;
-  document.getElementById("revenue").innerText = revenue.toFixed(2);
-  document.getElementById("profit").innerText = profit.toFixed(2);
+  document.getElementById("items").innerText =
+    items;
+
+  document.getElementById("revenue").innerText =
+    revenue.toFixed(2);
+
+  document.getElementById("profit").innerText =
+    profit.toFixed(2);
+
+  document.getElementById("cashTotal").innerText =
+    cashTotal.toFixed(2);
+
+  document.getElementById("upiTotal").innerText =
+    upiTotal.toFixed(2);
 
   updateMonthly();
 }
@@ -280,6 +313,8 @@ function exportPDF() {
     });
   }
 
+  let cashTotal = 0;
+let upiTotal = 0;
  let revenue = 0;
 let profit = 0;
 
@@ -290,11 +325,31 @@ allItems.forEach(item => {
   profit +=
     (item.sell - item.cost) * item.qty;
 
+  if(item.payment === "Cash"){
+  cashTotal += item.sell * item.qty;
+}
+
+if(item.payment === "UPI"){
+  upiTotal += item.sell * item.qty;
+}
+  
 });
 
   doc.text("Total Revenue: ₹" + revenue.toFixed(2), 20, y + 10);
   doc.text("Total Profit: ₹" + profit.toFixed(2), 20, y + 20);
 
+doc.text(
+  "Cash Sales: ₹" + cashTotal.toFixed(2),
+  20,
+  y + 30
+);
+
+doc.text(
+  "UPI Sales: ₹" + upiTotal.toFixed(2),
+  20,
+  y + 40
+);
+  
   doc.save("daily-report.pdf");
 }
   
