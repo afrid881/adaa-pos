@@ -52,6 +52,7 @@
 <h3>💸 Discount</h3>
 <input type="number" id="discount" placeholder="Enter discount ₹" oninput="updateBillTotal()">  
 
+  
   <h3>💳 Payment Method</h3>
 
 <select id="paymentMethod" onchange="updateBillTotal()">
@@ -76,6 +77,8 @@
   <h3>🧾 Transaction History</h3>
   <div id="transactions"></div>
 </div>
+
+  <div>Total Discounts: ₹<span id="discountTotal">0</span></div>
   
 <div class="box">
   <h3>📅 Monthly Summary</h3>
@@ -175,43 +178,79 @@ function removeItem(i) {
 }
 
 // ===== MOVE TO DAILY =====
+  
 function clearBill() {
-  let payment = document.getElementById("paymentMethod").value;
+
+  if(cart.length === 0) return;
+
+  let payment =
+    document.getElementById("paymentMethod").value;
+
+  let discount =
+    +document.getElementById("discount").value || 0;
+
+  let grossTotal = 0;
 
   cart.forEach(item => {
-    dailySales.push({
-      id: Date.now() + Math.random(),
-      cost: item.cost,
-      sell: item.sell,
-      qty: item.qty,
-      payment: payment,
-      date: new Date().toLocaleString()
-    });
+    grossTotal += item.sell * item.qty;
+  });
+
+  let finalTotal = grossTotal - discount;
+
+  dailySales.push({
+    id: Date.now(),
+    date: new Date().toLocaleString(),
+    items: [...cart],
+    grossTotal: grossTotal,
+    discount: discount,
+    netTotal: finalTotal,
+    payment: payment
   });
 
   cart = [];
 
+  document.getElementById("discount").value = "";
+
   saveData();
   renderCart();
+  renderTransactions();
+  updateSummary();
 }
 
 // ===== SUMMARY (ONLY DAILY SALES) =====
 function updateSummary() {
-  let revenue = 0;
-  let profit = 0;
-  let items = 0;
 
-  dailySales.forEach(item => {
-    revenue += item.sell * item.qty;
-    profit += (item.sell - item.cost) * item.qty;
-    items += item.qty;
+  let grossRevenue = 0;
+  let totalDiscount = 0;
+  let netRevenue = 0;
+  let totalProfit = 0;
+
+  dailySales.forEach(sale => {
+
+    grossRevenue += sale.grossTotal;
+
+    totalDiscount += sale.discount;
+
+    netRevenue += sale.netTotal;
+
+    sale.items.forEach(item => {
+      totalProfit +=
+        ((item.sell - item.cost) * item.qty);
+    });
+
   });
 
-  document.getElementById("items").innerText = items;
-  document.getElementById("revenue").innerText = revenue.toFixed(2);
-  document.getElementById("profit").innerText = profit.toFixed(2);
+  // subtract discounts from profit
+  totalProfit -= totalDiscount;
 
-  updateMonthly();
+  document.getElementById("revenue").innerText =
+    netRevenue.toFixed(2);
+
+  document.getElementById("profit").innerText =
+    totalProfit.toFixed(2);
+  
+document.getElementById("discountTotal").innerText =
+  totalDiscount.toFixed(2);
 }
 
 // ===== END DAY =====
@@ -287,6 +326,57 @@ function exportPDF() {
   doc.text("Total Profit: ₹" + profit.toFixed(2), 20, y + 20);
 
   doc.save("daily-report.pdf");
+
+  let grossRevenue = 0;
+let totalDiscount = 0;
+let netRevenue = 0;
+let profit = 0;
+
+dailySales.forEach(sale => {
+
+  grossRevenue += sale.grossTotal;
+  totalDiscount += sale.discount;
+  netRevenue += sale.netTotal;
+
+  sale.items.forEach(item => {
+    profit +=
+      ((item.sell - item.cost) * item.qty);
+  });
+
+});
+
+profit -= totalDiscount;
+
+  doc.text(
+  "Gross Sales: ₹" + grossRevenue.toFixed(2),
+  20,
+  y
+);
+
+y += 10;
+
+doc.text(
+  "Discount Given: ₹" + totalDiscount.toFixed(2),
+  20,
+  y
+);
+
+y += 10;
+
+doc.text(
+  "Net Revenue: ₹" + netRevenue.toFixed(2),
+  20,
+  y
+);
+
+y += 10;
+
+doc.text(
+  "Profit: ₹" + profit.toFixed(2),
+  20,
+  y
+);
+  
 }
   
   let lastPDFBlob = null;
@@ -411,6 +501,19 @@ function sharePDF() {
 
     div.appendChild(row);
   });
+
+    row.innerHTML = `
+  ${sale.date}<br>
+  Gross: ₹${sale.grossTotal}<br>
+  Discount: ₹${sale.discount}<br>
+  Net Sale: ₹${sale.netTotal}<br>
+  Payment: ${sale.payment}<br>
+
+  <button onclick="deleteTransaction(${index})">
+    ↩️ Return
+  </button>
+`;
+    
 }
 
   function deleteTransaction(index) {
