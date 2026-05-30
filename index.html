@@ -60,7 +60,8 @@
 <div>₹<span id="billTotal">0</span></div>
 <div class="box">
 
-
+<h3>💰 Payable Amount</h3>
+<div>₹<span id="finalTotal">0</span></div>
   
   <h3>📊 Today Summary</h3>
   <div>Items: <span id="items">0</span></div>
@@ -474,17 +475,26 @@ function sharePDF() {
 }
 
  function updateBillTotal() {
+
   let total = 0;
 
   cart.forEach(item => {
     total += item.sell * item.qty;
   });
 
-  document.getElementById("billTotal").innerText =
-    total.toFixed(2);
+  let billTotal =
+    document.getElementById("billTotal");
 
-  document.getElementById("finalTotal").innerText =
-    total.toFixed(2);
+  let finalTotal =
+    document.getElementById("finalTotal");
+
+  if (billTotal) {
+    billTotal.innerText = total.toFixed(2);
+  }
+
+  if (finalTotal) {
+    finalTotal.innerText = total.toFixed(2);
+  }
 }
   
 // ===== INIT =====
