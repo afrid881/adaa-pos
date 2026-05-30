@@ -255,39 +255,71 @@ function updateSummary() {
   
 // ===== END DAY =====
 function endDay() {
-  if (dailySales.length === 0) return alert("No sales today");
+
+  if (dailySales.length === 0) {
+    alert("No sales today");
+    return;
+  }
 
   let revenue = 0;
   let profit = 0;
 
-  dailySales.forEach(item => {
-    revenue += item.sell * item.qty;
-    profit += (item.sell - item.cost) * item.qty;
+  dailySales.forEach(sale => {
+
+    revenue += sale.netTotal;
+
+    let saleProfit = 0;
+
+    sale.items.forEach(item => {
+      saleProfit +=
+        ((item.sell - item.cost) * item.qty);
+    });
+
+    saleProfit -= sale.discount;
+
+    profit += saleProfit;
+
   });
 
-  let today = new Date().toLocaleDateString();
-
-  monthlyData.push({ date: today, revenue, profit });
+  monthlyData.push({
+    date: new Date().toLocaleDateString(),
+    revenue: revenue,
+    profit: profit
+  });
 
   dailySales = [];
+
   saveData();
+
   updateSummary();
+  updateMonthly();
+  renderTransactions();
 
   alert("Day Closed & Saved");
 }
 
 // ===== MONTHLY =====
 function updateMonthly() {
+
   let totalRevenue = 0;
   let totalProfit = 0;
 
   monthlyData.forEach(day => {
+
     totalRevenue += day.revenue;
     totalProfit += day.profit;
+
   });
 
-  document.getElementById("monthlyRevenue").innerText = totalRevenue.toFixed(2);
-  document.getElementById("monthlyProfit").innerText = totalProfit.toFixed(2);
+  document.getElementById(
+    "monthlyRevenue"
+  ).innerText =
+    totalRevenue.toFixed(2);
+
+  document.getElementById(
+    "monthlyProfit"
+  ).innerText =
+    totalProfit.toFixed(2);
 }
 
 // ===== PDF EXPORT =====
@@ -478,38 +510,39 @@ function sharePDF() {
 }
 
   function renderTransactions() {
+
   let div = document.getElementById("transactions");
 
   div.innerHTML = "";
 
-  dailySales.forEach((item, index) => {
-    let profit = (item.sell - item.cost) * item.qty;
+  dailySales.forEach((sale, index) => {
+
+    let profit = 0;
+
+    sale.items.forEach(item => {
+      profit +=
+        ((item.sell - item.cost) * item.qty);
+    });
+
+    profit -= sale.discount;
 
     let row = document.createElement("div");
+
     row.className = "item";
 
     row.innerHTML = `
-      ${item.date}<br>
-      Cost ₹${item.cost} | Sell ₹${item.sell} x ${item.qty}<br>
-      Payment: ${item.payment}<br>
-      Profit ₹${profit.toFixed(2)}<br>
+      <strong>${sale.date}</strong><br>
+      Gross: ₹${sale.grossTotal.toFixed(2)}<br>
+      Discount: ₹${sale.discount.toFixed(2)}<br>
+      Net: ₹${sale.netTotal.toFixed(2)}<br>
+      Payment: ${sale.payment}<br>
+      Profit: ₹${profit.toFixed(2)}<br>
 
-      <button onclick="editTransaction(${index})">✏️ Edit</button>
-      <button onclick="deleteTransaction(${index})">↩️ Return/Delete</button>
+      <button onclick="deleteTransaction(${index})">
+      ↩️ Return
+      </button>
     `;
 
-row.innerHTML = `
-  ${sale.date}<br>
-  Gross: ₹${sale.grossTotal}<br>
-  Discount: ₹${sale.discount}<br>
-  Net Sale: ₹${sale.netTotal}<br>
-  Payment: ${sale.payment}<br>
-
-  <button onclick="deleteTransaction(${index})">
-    ↩️ Return
-  </button>
-`;
-    
     div.appendChild(row);
   });
 }
@@ -576,7 +609,9 @@ row.innerHTML = `
   
 // ===== INIT =====
 updateSummary();
-  renderTransactions();
+updateMonthly();
+renderTransactions();
+renderCart();
 </script>
 
 </body>
