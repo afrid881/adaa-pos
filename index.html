@@ -71,8 +71,6 @@
   <div>Revenue: ₹<span id="revenue">0</span></div>
   <div>Profit: ₹<span id="profit">0</span></div>
 </div>
-
-<div>Total Discounts: ₹<span id="discountTotal">0</span></div>
   
 <div class="box">
   <h3>🧾 Transaction History</h3>
@@ -177,149 +175,80 @@ function removeItem(i) {
 }
 
 // ===== MOVE TO DAILY =====
-  
 function clearBill() {
-
-  if(cart.length === 0) return;
-
-  let payment =
-    document.getElementById("paymentMethod").value;
-
-  let discount =
-    +document.getElementById("discount").value || 0;
-
-  let grossTotal = 0;
+  let payment = document.getElementById("paymentMethod").value;
 
   cart.forEach(item => {
-    grossTotal += item.sell * item.qty;
-  });
-
-  let finalTotal = grossTotal - discount;
-
-  dailySales.push({
-    id: Date.now(),
-    date: new Date().toLocaleString(),
-    items: [...cart],
-    grossTotal: grossTotal,
-    discount: discount,
-    netTotal: finalTotal,
-    payment: payment
+    dailySales.push({
+      id: Date.now() + Math.random(),
+      cost: item.cost,
+      sell: item.sell,
+      qty: item.qty,
+      payment: payment,
+      date: new Date().toLocaleString()
+    });
   });
 
   cart = [];
 
-  document.getElementById("discount").value = "";
-
   saveData();
   renderCart();
-  renderTransactions();
-  updateSummary();
 }
 
 // ===== SUMMARY (ONLY DAILY SALES) =====
-
 function updateSummary() {
+  let revenue = 0;
+  let profit = 0;
+  let items = 0;
 
-  let grossRevenue = 0;
-  let totalDiscount = 0;
-  let netRevenue = 0;
-  let totalProfit = 0;
-
-  dailySales.forEach(sale => {
-
-    grossRevenue += sale.grossTotal;
-
-    totalDiscount += sale.discount;
-
-    netRevenue += sale.netTotal;
-
-    sale.items.forEach(item => {
-      totalProfit +=
-        ((item.sell - item.cost) * item.qty);
-    });
-
+  dailySales.forEach(item => {
+    revenue += item.sell * item.qty;
+    profit += (item.sell - item.cost) * item.qty;
+    items += item.qty;
   });
 
-  // subtract discounts from profit
-  totalProfit -= totalDiscount;
+  document.getElementById("items").innerText = items;
+  document.getElementById("revenue").innerText = revenue.toFixed(2);
+  document.getElementById("profit").innerText = profit.toFixed(2);
 
-  document.getElementById("revenue").innerText =
-    netRevenue.toFixed(2);
-
-  document.getElementById("profit").innerText =
-    totalProfit.toFixed(2);
-
-  document.getElementById("discountTotal").innerText =
-  totalDiscount.toFixed(2);
+  updateMonthly();
 }
-  
+
 // ===== END DAY =====
 function endDay() {
-
-  if (dailySales.length === 0) {
-    alert("No sales today");
-    return;
-  }
+  if (dailySales.length === 0) return alert("No sales today");
 
   let revenue = 0;
   let profit = 0;
 
-  dailySales.forEach(sale => {
-
-    revenue += sale.netTotal;
-
-    let saleProfit = 0;
-
-    sale.items.forEach(item => {
-      saleProfit +=
-        ((item.sell - item.cost) * item.qty);
-    });
-
-    saleProfit -= sale.discount;
-
-    profit += saleProfit;
-
+  dailySales.forEach(item => {
+    revenue += item.sell * item.qty;
+    profit += (item.sell - item.cost) * item.qty;
   });
 
-  monthlyData.push({
-    date: new Date().toLocaleDateString(),
-    revenue: revenue,
-    profit: profit
-  });
+  let today = new Date().toLocaleDateString();
+
+  monthlyData.push({ date: today, revenue, profit });
 
   dailySales = [];
-
   saveData();
-
   updateSummary();
-  updateMonthly();
-  renderTransactions();
 
   alert("Day Closed & Saved");
 }
 
 // ===== MONTHLY =====
 function updateMonthly() {
-
   let totalRevenue = 0;
   let totalProfit = 0;
 
   monthlyData.forEach(day => {
-
     totalRevenue += day.revenue;
     totalProfit += day.profit;
-
   });
 
-  document.getElementById(
-    "monthlyRevenue"
-  ).innerText =
-    totalRevenue.toFixed(2);
-
-  document.getElementById(
-    "monthlyProfit"
-  ).innerText =
-    totalProfit.toFixed(2);
+  document.getElementById("monthlyRevenue").innerText = totalRevenue.toFixed(2);
+  document.getElementById("monthlyProfit").innerText = totalProfit.toFixed(2);
 }
 
 // ===== PDF EXPORT =====
@@ -359,56 +288,6 @@ function exportPDF() {
 
   doc.save("daily-report.pdf");
 }
-
-  let grossRevenue = 0;
-let totalDiscount = 0;
-let netRevenue = 0;
-let profit = 0;
-
-dailySales.forEach(sale => {
-
-  grossRevenue += sale.grossTotal;
-  totalDiscount += sale.discount;
-  netRevenue += sale.netTotal;
-
-  sale.items.forEach(item => {
-    profit +=
-      ((item.sell - item.cost) * item.qty);
-  });
-
-});
-
-profit -= totalDiscount;
-
-  doc.text(
-  "Gross Sales: ₹" + grossRevenue.toFixed(2),
-  20,
-  y
-);
-
-y += 10;
-
-doc.text(
-  "Discount Given: ₹" + totalDiscount.toFixed(2),
-  20,
-  y
-);
-
-y += 10;
-
-doc.text(
-  "Net Revenue: ₹" + netRevenue.toFixed(2),
-  20,
-  y
-);
-
-y += 10;
-
-doc.text(
-  "Profit: ₹" + profit.toFixed(2),
-  20,
-  y
-);
   
   let lastPDFBlob = null;
 
@@ -510,37 +389,24 @@ function sharePDF() {
 }
 
   function renderTransactions() {
-
   let div = document.getElementById("transactions");
 
   div.innerHTML = "";
 
-  dailySales.forEach((sale, index) => {
-
-    let profit = 0;
-
-    sale.items.forEach(item => {
-      profit +=
-        ((item.sell - item.cost) * item.qty);
-    });
-
-    profit -= sale.discount;
+  dailySales.forEach((item, index) => {
+    let profit = (item.sell - item.cost) * item.qty;
 
     let row = document.createElement("div");
-
     row.className = "item";
 
     row.innerHTML = `
-      <strong>${sale.date}</strong><br>
-      Gross: ₹${sale.grossTotal.toFixed(2)}<br>
-      Discount: ₹${sale.discount.toFixed(2)}<br>
-      Net: ₹${sale.netTotal.toFixed(2)}<br>
-      Payment: ${sale.payment}<br>
-      Profit: ₹${profit.toFixed(2)}<br>
+      ${item.date}<br>
+      Cost ₹${item.cost} | Sell ₹${item.sell} x ${item.qty}<br>
+      Payment: ${item.payment}<br>
+      Profit ₹${profit.toFixed(2)}<br>
 
-      <button onclick="deleteTransaction(${index})">
-      ↩️ Return
-      </button>
+      <button onclick="editTransaction(${index})">✏️ Edit</button>
+      <button onclick="deleteTransaction(${index})">↩️ Return/Delete</button>
     `;
 
     div.appendChild(row);
@@ -609,9 +475,7 @@ function sharePDF() {
   
 // ===== INIT =====
 updateSummary();
-updateMonthly();
-renderTransactions();
-renderCart();
+  renderTransactions();
 </script>
 
 </body>
